@@ -37,6 +37,13 @@ class COGJEPDashboard:
 
         logger.info("Dashboard initialized")
 
+    def set_model(self, model_name: str):
+        """Change the Ollama model."""
+        if self.ollama and self.ollama.connected:
+            self.ollama.model = model_name
+            return f"✅ Switched to {model_name}"
+        return "❌ Ollama not connected"
+
     def start_pipeline(
         self, mode: str, file_path: str, max_frames: int, threshold: float
     ):
@@ -181,6 +188,28 @@ def create_dashboard() -> gr.Blocks:
             with gr.Row():
                 with gr.Column(scale=1):
                     gr.Markdown("### ⚙️ Configuration")
+
+                    # Model selector (displays available models)
+                    import requests
+
+                    try:
+                        resp = requests.get(
+                            "http://localhost:11434/api/tags", timeout=2
+                        )
+                        if resp.status_code == 200:
+                            models = resp.json().get("models", [])
+                            model_choices = [m["name"] for m in models]
+                        else:
+                            model_choices = ["llama3.2:latest"]
+                    except:
+                        model_choices = ["llama3.2:latest"]
+
+                    model_select = gr.Dropdown(
+                        label="🧠 LLM Model",
+                        choices=model_choices,
+                        value=model_choices[0] if model_choices else "llama3.2:latest",
+                    )
+
                     mode_select = gr.Radio(
                         ["test", "file", "webcam"], label="Input Source", value="file"
                     )
@@ -210,6 +239,9 @@ def create_dashboard() -> gr.Blocks:
                         stop_btn = gr.Button("⏹️ Stop", variant="stop")
 
                     status = gr.Textbox(label="Status", lines=3)
+
+                    # Model change button
+                    model_change_btn = gr.Button("🔄 Change Model")
 
                 with gr.Column(scale=2):
                     gr.Markdown("### 📊 Live Statistics")
@@ -355,7 +387,7 @@ def create_dashboard() -> gr.Blocks:
 
         # Event handlers
         def start_pipeline(mode, file_obj, frames, thresh):
-            file_path = file_obj.name if file_obj else None
+            file_path = str(file_obj.name) if file_obj else None
             return dashboard.start_pipeline(mode, file_path, int(frames), float(thresh))
 
         start_btn.click(
@@ -365,6 +397,12 @@ def create_dashboard() -> gr.Blocks:
         )
 
         stop_btn.click(dashboard.stop_pipeline, outputs=status)
+
+        # Model change handler
+        def change_model(model_name):
+            return dashboard.set_model(model_name)
+
+        model_change_btn.click(change_model, inputs=[model_select], outputs=status)
 
         def update_stats():
             state = dashboard.get_state()

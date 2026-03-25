@@ -20,6 +20,34 @@ logger = logging.getLogger(__name__)
 OLLAMA_HOST = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.2:latest"
 
+# Available models for different tasks
+AVAILABLE_MODELS = {
+    "llama3.2:latest": {
+        "description": "Llama 3.2 (default) - General purpose",
+        "type": "text",
+    },
+    "llama3.2:3b": {
+        "description": "Llama 3.2 3B - Faster, less memory",
+        "type": "text",
+    },
+    "llama3.1:latest": {
+        "description": "Llama 3.1 - Larger context",
+        "type": "text",
+    },
+    "phi4:latest": {
+        "description": "Phi-4 - Microsoft small model",
+        "type": "text",
+    },
+    "qwen2.5:latest": {
+        "description": "Qwen 2.5 - Alibaba's model",
+        "type": "text",
+    },
+    "mistral:latest": {
+        "description": "Mistral - Efficient model",
+        "type": "text",
+    },
+}
+
 
 class OllamaClient:
     """Client for Ollama API - real AI for scene understanding."""
