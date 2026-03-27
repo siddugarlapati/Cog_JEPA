@@ -311,14 +311,17 @@ class VideoPipeline:
                 f"surprise: {surprise:.3f}, description: {description[:60]}..."
             )
 
-        # Step 6: Show prediction error for demo (meta-learning visualization)
-        # Even without gradient updates, we can see the model learning
-        if len(self.context_window) > 0:
+        # Step 6: Show prediction error for demo (only when --show-weights is used)
+        # This shows the model's prediction vs actual frame difference
+        if (
+            hasattr(self, "show_weights")
+            and self.show_weights
+            and len(self.context_window) > 0
+        ):
             z_actual_tensor = torch.from_numpy(z_actual).float()
             z_pred_tensor = torch.from_numpy(z_predicted).float()
             error = (z_actual_tensor - z_pred_tensor).norm().item()
-            if hasattr(self, "show_weights") and self.show_weights:
-                print(f"  [META-LEARN] Prediction error: {error:.4f}")
+            print(f"  [META-LEARN] Prediction error: {error:.4f}")
 
         # Clean up
         if self.device == "mps":
