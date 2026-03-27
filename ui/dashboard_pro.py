@@ -435,7 +435,21 @@ def create_dashboard() -> gr.Blocks:
 
         stop_btn.click(dashboard.stop_pipeline, outputs=status)
 
-        # Auto-refresh stats every 2 seconds when pipeline is running
+        # Function to update stats display
+        def update_stats():
+            state = dashboard.get_state()
+            history = state.get("surprise_history", [])
+            return (
+                state["frame_count"],
+                state["frame_count"]
+                / max(1, time.time() - (dashboard.start_time or time.time())),
+                state["surprise_score"],
+                state["stored_events"],
+                state["compression_ratio"] * 100,
+                [[i, s] for i, s in enumerate(history[-50:])] if history else [],
+            )
+
+        # Auto-refresh stats on page load
         demo.load(
             update_stats,
             outputs=[
