@@ -42,19 +42,26 @@ class CogneeMemoryStore:
         logger.info(f"CogneeMemoryStore initialized with db_path: {self.db_path}")
 
     def _load_from_log(self):
-        """Load events from the log file."""
+        """Load events from the log file (deduplicates by event_id)."""
         log_path = getattr(config, "log_path", "data/session.log")
         if os.path.exists(log_path):
             try:
+                existing_ids = {e.get("event_id") for e in self.events}
+                new_events = []
                 with open(log_path, "r") as f:
                     for line in f:
                         if line.strip():
                             try:
                                 event = json.loads(line)
-                                self.events.append(event)
+                                eid = event.get("event_id")
+                                if eid not in existing_ids:
+                                    new_events.append(event)
+                                    existing_ids.add(eid)
                             except json.JSONDecodeError:
                                 pass
-                logger.info(f"Loaded {len(self.events)} events from log")
+                self.events.extend(new_events)
+                if new_events:
+                    logger.info(f"Loaded {len(new_events)} new events from log (total: {len(self.events)})")
             except Exception as e:
                 logger.warning(f"Failed to load log: {e}")
 

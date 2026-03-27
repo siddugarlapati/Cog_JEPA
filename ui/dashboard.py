@@ -144,10 +144,17 @@ class COGJEPDashboard:
         if not self.memory_store.events:
             return "No events in memory yet. Start the pipeline first."
 
-        # Get context from recent events
-        recent = self.memory_store.get_recent_events_sync(n=10)
+        # Use Ollama if available for best answers
+        from reasoning.ollama_client import get_ollama
+        ollama = get_ollama()
+        events = self.memory_store.get_recent_events_sync(n=50)
+
+        if ollama.connected:
+            return ollama.answer_question(question, events)
+
+        # Fallback: build context string in the format _query_memory_fallback expects
         context_parts = []
-        for event in recent:
+        for event in events:
             context_parts.append(
                 f"Frame {event.get('frame_index', '?')}: "
                 f"surprise={event.get('surprise_score', 0):.3f}, "
@@ -155,25 +162,7 @@ class COGJEPDashboard:
             )
         context = "\n".join(context_parts)
 
-        # Query with LLM or use video summary
-        question_lower = question.lower()
-
-        if (
-            "summary" in question_lower
-            or "explain" in question_lower
-            or "what happened" in question_lower
-            or "tell me" in question_lower
-        ):
-            # Use the video captioner's summary
-            from reasoning.captioner import get_captioner
-
-            captioner = get_captioner()
-            events = self.memory_store.get_recent_events_sync(n=50)
-            answer = captioner.generate_video_summary(events)
-        else:
-            answer = self.llm_reasoner.query_memory(question, context)
-
-        return answer
+        return self.llm_reasoner.query_memory(question, context)
 
     def get_recent_events(self) -> List[Dict]:
         """Get recent events for display."""

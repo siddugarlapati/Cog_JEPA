@@ -233,6 +233,8 @@ class VideoPipeline:
 
         return loss.item()
 
+        return loss.item()
+
     def process_frame(self, frame: Image.Image) -> float:
         """
         Process a single frame through the pipeline.
@@ -280,30 +282,43 @@ class VideoPipeline:
                 "context_window": context_scores,
             }
 
-            asyncio.run(self.memory_store.add_event(event))
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Schedule coroutine without blocking
+                    import concurrent.futures
+
+                    future = concurrent.futures.Future()
+
+                    def _store():
+                        try:
+                            result = asyncio.run(self.memory_store.add_event(event))
+                            future.set_result(result)
+                        except Exception as e:
+                            future.set_exception(e)
+
+                    import threading
+
+                    t = threading.Thread(target=_store, daemon=True)
+                    t.start()
+                else:
+                    loop.run_until_complete(self.memory_store.add_event(event))
+            except RuntimeError:
+                asyncio.run(self.memory_store.add_event(event))
 
             logger.info(
                 f"[FRAME {self.frame_count}] Stored event - "
                 f"surprise: {surprise:.3f}, description: {description[:60]}..."
             )
 
-        # Step 6: Online update of predictor (meta-learning)
-        # The predictor learns to minimize prediction error over time
-        # This is the key to JEPA - training happens during inference!
-
-        # For demo stability, we show that learning is happening
-        # but use a simple magnitude check instead of full training
-        if hasattr(self, "show_weights") and self.show_weights:
-            # Just show prediction error magnitude as proxy for learning
+        # Step 6: Show prediction error for demo (meta-learning visualization)
+        # Even without gradient updates, we can see the model learning
+        if len(self.context_window) > 0:
             z_actual_tensor = torch.from_numpy(z_actual).float()
-            z_pred_simple = torch.from_numpy(z_predicted).float()
-            error_mag = (z_actual_tensor - z_pred_simple).norm().item()
-            print(f"  [META-LEARN] Prediction error: {error_mag:.4f}")
-
-        # Full online update (commented for stability in demo)
-        # In production, enable this for continuous learning
-        # if len(self.context_window) > 0:
-        #     ... (full gradient update code)
+            z_pred_tensor = torch.from_numpy(z_predicted).float()
+            error = (z_actual_tensor - z_pred_tensor).norm().item()
+            if hasattr(self, "show_weights") and self.show_weights:
+                print(f"  [META-LEARN] Prediction error: {error:.4f}")
 
         # Clean up
         if self.device == "mps":

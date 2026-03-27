@@ -97,13 +97,12 @@ class OllamaClient:
         messages.append({"role": "user", "content": prompt})
 
         try:
-            # Use /api/generate endpoint instead for non-streaming
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json={
                     "model": self.model,
                     "prompt": prompt,
-                    "system": system,
+                    "system": system or "",
                     "temperature": temperature,
                     "stream": False,
                 },
@@ -111,17 +110,18 @@ class OllamaClient:
             )
 
             if response.status_code == 200:
-                # Handle multiple JSON responses (split by newlines)
-                text = response.text.strip()
-                lines = text.split("\n")
-                # Take the last valid JSON
-                for line in reversed(lines):
-                    if line.strip():
-                        try:
-                            result = json.loads(line)
-                            return result.get("response", "")
-                        except:
-                            continue
+                try:
+                    result = response.json()
+                    return result.get("response", "").strip()
+                except Exception:
+                    # Fallback: parse last valid JSON line
+                    for line in reversed(response.text.strip().split("\n")):
+                        if line.strip():
+                            try:
+                                result = json.loads(line)
+                                return result.get("response", "").strip()
+                            except Exception:
+                                continue
                 return "No response from Ollama"
             else:
                 return f"Error: {response.status_code}"

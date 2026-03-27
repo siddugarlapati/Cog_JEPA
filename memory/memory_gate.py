@@ -88,6 +88,9 @@ class MemoryGate:
         Returns:
             Adaptive threshold value
         """
+        if self.ema_baseline > 0:
+            # Adaptive: base_threshold scaled by EMA baseline
+            return max(self.base_threshold, self.ema_baseline * (1.0 + self.threshold_multiplier))
         return self.base_threshold
 
     def get_compression_ratio(self) -> float:
