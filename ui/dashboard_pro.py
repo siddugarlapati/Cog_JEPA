@@ -402,26 +402,14 @@ def create_dashboard() -> gr.Blocks:
         # Event handlers
         def start_pipeline(mode, file_obj, frames, thresh):
             file_path = str(file_obj.name) if file_obj else None
-            return dashboard.start_pipeline(mode, file_path, int(frames), float(thresh))
-
-        start_btn.click(
-            start_pipeline,
-            inputs=[mode_select, file_input, max_frames, threshold],
-            outputs=status,
-        )
-
-        stop_btn.click(dashboard.stop_pipeline, outputs=status)
-
-        # Model change handler
-        def change_model(model_name):
-            return dashboard.set_model(model_name)
-
-        model_change_btn.click(change_model, inputs=[model_select], outputs=status)
-
-        def update_stats():
+            result = dashboard.start_pipeline(
+                mode, file_path, int(frames), float(thresh)
+            )
+            # Trigger initial stats update
             state = dashboard.get_state()
             history = state.get("surprise_history", [])
             return (
+                result,
                 state["frame_count"],
                 state["frame_count"]
                 / max(1, time.time() - (dashboard.start_time or time.time())),
@@ -431,7 +419,43 @@ def create_dashboard() -> gr.Blocks:
                 [[i, s] for i, s in enumerate(history[-50:])] if history else [],
             )
 
-        refresh_btn.click(
+        start_btn.click(
+            start_pipeline,
+            inputs=[mode_select, file_input, max_frames, threshold],
+            outputs=[
+                status,
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
+        )
+
+        stop_btn.click(dashboard.stop_pipeline, outputs=status)
+
+        # Auto-refresh stats every 2 seconds when pipeline is running
+        demo.load(
+            update_stats,
+            outputs=[
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
+        )
+
+        # Model change handler
+        def change_model(model_name):
+            return dashboard.set_model(model_name)
+
+        model_change_btn.click(change_model, inputs=[model_select], outputs=status)
+
+        # Auto-refresh on page load
+        demo.load(
             update_stats,
             outputs=[
                 frames_stat,
