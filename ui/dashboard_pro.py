@@ -399,50 +399,12 @@ def create_dashboard() -> gr.Blocks:
                 outputs=[gen_output, gen_prompt],
             )
 
-        # Event handlers - simplified for Gradio 6.0 compatibility
-        def start_pipeline_fn(mode, file_obj, frames, thresh):
-            # Handle file object or path
-            actual_path = ""
-            if file_obj:
-                if isinstance(file_obj, str):
-                    actual_path = file_obj
-                else:
-                    try:
-                        actual_path = str(file_obj)
-                    except:
-                        actual_path = ""
+        # Simple test function
+        def run_test():
+            result = dashboard.start_pipeline("test", "", 50, 0.8)
+            return result
 
-            # Call dashboard method
-            result = dashboard.start_pipeline(
-                mode, actual_path, int(frames), float(thresh)
-            )
-            # Trigger initial stats update
-            state = dashboard.get_state()
-            history = state.get("surprise_history", [])
-            return (
-                result,
-                state["frame_count"],
-                state["frame_count"]
-                / max(1, time.time() - (dashboard.start_time or time.time())),
-                state["surprise_score"],
-                state["stored_events"],
-                state["compression_ratio"] * 100,
-                [[i, s] for i, s in enumerate(history[-50:])] if history else [],
-            )
-
-        start_btn.click(
-            start_pipeline_fn,
-            inputs=[mode_select, file_input, max_frames, threshold],
-            outputs=[
-                status,
-                frames_stat,
-                fps_stat,
-                surprise_stat,
-                stored_stat,
-                compression_stat,
-                plot,
-            ],
-        )
+        start_btn.click(run_test, outputs=status)
 
         stop_btn.click(dashboard.stop_pipeline, outputs=status)
 
