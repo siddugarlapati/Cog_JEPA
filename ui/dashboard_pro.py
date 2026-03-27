@@ -63,13 +63,10 @@ class COGJEPDashboard:
             video_source=video_source, use_llm=False, threshold_override=threshold
         )
 
-        def run_pipeline():
-            self.pipeline.run(
-                max_frames=max_frames if max_frames > 0 else None, display=False
-            )
-
-        self.pipeline_thread = threading.Thread(target=run_pipeline, daemon=True)
-        self.pipeline_thread.start()
+        # Run synchronously so we can see results immediately
+        self.pipeline.run(
+            max_frames=max_frames if max_frames > 0 else None, display=False
+        )
 
         self.running = True
         self.start_time = time.time()
@@ -275,6 +272,8 @@ def create_dashboard() -> gr.Blocks:
                     plot = gr.LinePlot(
                         title="Surprise Score Over Time",
                         height=250,
+                        x="frame",
+                        y="surprise",
                     )
 
         with gr.Tab("💬 Query Video"):
@@ -399,12 +398,37 @@ def create_dashboard() -> gr.Blocks:
                 outputs=[gen_output, gen_prompt],
             )
 
-        # Simple test function
+        # Simple test function - runs synchronously
         def run_test():
             result = dashboard.start_pipeline("test", "", 50, 0.8)
-            return result
+            state = dashboard.get_state()
+            history = state.get("surprise_history", [])
 
-        start_btn.click(run_test, outputs=status)
+            # Format data for plot - create simple list
+            plot_data = [[i, s] for i, s in enumerate(history[-50:])] if history else []
+
+            return (
+                result,
+                state["frame_count"],
+                state["frame_count"] / max(1, 1.0),
+                state["surprise_score"],
+                state["stored_events"],
+                state["compression_ratio"] * 100,
+                plot_data,
+            )
+
+        start_btn.click(
+            run_test,
+            outputs=[
+                status,
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
+        )
 
         stop_btn.click(dashboard.stop_pipeline, outputs=status)
 
