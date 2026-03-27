@@ -176,13 +176,32 @@ def create_dashboard() -> gr.Blocks:
     }
     """
 
-    with gr.Blocks(title="COG-JEPA - Cognitive Memory", css=custom_css) as demo:
+    with gr.Blocks(title="COG-JEPA - Cognitive Memory") as demo:
         gr.Markdown("""
         # 🧠 COG-JEPA
         ## Cognitive Predictive Memory for Vision AI
         ---
         *JEPA + Cognee + Ollama-powered video understanding*
         """)
+
+        with gr.Tab("📷 Webcam Preview"):
+            gr.Markdown("### 🔴 Live Camera Preview")
+            gr.Markdown("Check your camera before starting analysis")
+
+            # Use Video with webcam source for Gradio 6.0
+            with gr.Row():
+                webcam_cam = gr.Video(
+                    label="Camera",
+                    sources=["webcam"],
+                    height=400,
+                )
+
+            gr.Markdown("""
+            **To start analysis:**
+            1. Make sure camera permission is granted
+            2. Click the camera icon in the video above to start
+            3. Go to **Video Analysis** tab and select webcam mode
+            """)
 
         with gr.Tab("🎬 Video Analysis"):
             with gr.Row():
@@ -244,6 +263,20 @@ def create_dashboard() -> gr.Blocks:
                     model_change_btn = gr.Button("🔄 Change Model")
 
                 with gr.Column(scale=2):
+                    gr.Markdown("### 📹 Live Camera Feed")
+
+                    # Live webcam display
+                    live_feed = gr.Image(
+                        label="Live Feed",
+                        height=300,
+                        sources=["webcam"]
+                        if False
+                        else None,  # Will be updated via code
+                    )
+
+                    # Placeholder for live updates
+                    gr.Markdown("*Camera feed will appear when processing webcam mode*")
+
                     gr.Markdown("### 📊 Live Statistics")
 
                     with gr.Row():
