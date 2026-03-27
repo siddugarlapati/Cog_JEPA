@@ -184,25 +184,6 @@ def create_dashboard() -> gr.Blocks:
         *JEPA + Cognee + Ollama-powered video understanding*
         """)
 
-        with gr.Tab("📷 Webcam Preview"):
-            gr.Markdown("### 🔴 Live Camera Preview")
-            gr.Markdown("Check your camera before starting analysis")
-
-            # Use Video with webcam source for Gradio 6.0
-            with gr.Row():
-                webcam_cam = gr.Video(
-                    label="Camera",
-                    sources=["webcam"],
-                    height=400,
-                )
-
-            gr.Markdown("""
-            **To start analysis:**
-            1. Make sure camera permission is granted
-            2. Click the camera icon in the video above to start
-            3. Go to **Video Analysis** tab and select webcam mode
-            """)
-
         with gr.Tab("🎬 Video Analysis"):
             with gr.Row():
                 with gr.Column(scale=1):
