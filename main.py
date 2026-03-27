@@ -22,12 +22,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_test_mode(max_frames: int, use_llm: bool, threshold: float):
+def run_test_mode(
+    max_frames: int, use_llm: bool, threshold: float, show_weights: bool = False
+):
     """Run pipeline with synthetic test frames."""
     logger.info("Running in TEST mode...")
 
     pipeline = VideoPipeline(
-        video_source="test", use_llm=use_llm, threshold_override=threshold
+        video_source="test",
+        use_llm=use_llm,
+        threshold_override=threshold,
+        show_weights=show_weights,
     )
 
     pipeline.run(max_frames=max_frames)
@@ -35,18 +40,29 @@ def run_test_mode(max_frames: int, use_llm: bool, threshold: float):
     return pipeline
 
 
-def run_webcam_mode(max_frames: int, use_llm: bool, threshold: float):
+def run_webcam_mode(
+    max_frames: int, use_llm: bool, threshold: float, show_weights: bool = False
+):
     """Run pipeline with live webcam feed."""
     logger.info("Running in WEBCAM mode...")
 
     pipeline = VideoPipeline(
-        video_source=0, use_llm=use_llm, threshold_override=threshold
+        video_source=0,
+        use_llm=use_llm,
+        threshold_override=threshold,
+        show_weights=show_weights,
     )
 
     pipeline.run(max_frames=max_frames)
 
 
-def run_file_mode(video_path: str, max_frames: int, use_llm: bool, threshold: float):
+def run_file_mode(
+    video_path: str,
+    max_frames: int,
+    use_llm: bool,
+    threshold: float,
+    show_weights: bool = False,
+):
     """Run pipeline with video file."""
     logger.info(f"Running in FILE mode: {video_path}")
 
@@ -55,7 +71,10 @@ def run_file_mode(video_path: str, max_frames: int, use_llm: bool, threshold: fl
         return
 
     pipeline = VideoPipeline(
-        video_source=video_path, use_llm=use_llm, threshold_override=threshold
+        video_source=video_path,
+        use_llm=use_llm,
+        threshold_override=threshold,
+        show_weights=show_weights,
     )
 
     pipeline.run(max_frames=max_frames)
@@ -125,6 +144,12 @@ def main():
         "--debug", action="store_true", help="Enable debug mode for API"
     )
 
+    parser.add_argument(
+        "--show-weights",
+        action="store_true",
+        help="Show weight norm for meta-learning demo",
+    )
+
     args = parser.parse_args()
 
     use_llm = not args.no_llm
@@ -136,16 +161,20 @@ def main():
 
     try:
         if args.mode == "test":
-            run_test_mode(args.frames or 100, use_llm, args.threshold)
+            run_test_mode(
+                args.frames or 100, use_llm, args.threshold, args.show_weights
+            )
 
         elif args.mode == "webcam":
-            run_webcam_mode(args.frames, use_llm, args.threshold)
+            run_webcam_mode(args.frames, use_llm, args.threshold, args.show_weights)
 
         elif args.mode == "file":
             if not args.video:
                 logger.error("--video required for file mode")
                 sys.exit(1)
-            run_file_mode(args.video, args.frames, use_llm, args.threshold)
+            run_file_mode(
+                args.video, args.frames, use_llm, args.threshold, args.show_weights
+            )
 
         elif args.mode == "dashboard":
             run_dashboard_mode(use_llm, pro=args.pro)
