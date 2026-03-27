@@ -35,7 +35,9 @@ class COGJEPDashboard:
 
     # ── Pipeline control ────────────────────────────────────────────────────
 
-    def start_pipeline(self, mode: str, file_obj, max_frames: int, threshold: float) -> str:
+    def start_pipeline(
+        self, mode: str, file_obj, max_frames: int, threshold: float
+    ) -> str:
         if self.running:
             return "⚠️ Pipeline already running"
 
@@ -105,10 +107,12 @@ class COGJEPDashboard:
         """Safely create a DataFrame for LinePlot. Never empty — always at least one row."""
         if history:
             recent = history[-50:]
-            df = pd.DataFrame({
-                "frame": list(range(len(recent))),
-                "surprise": [float(s) for s in recent],
-            })
+            df = pd.DataFrame(
+                {
+                    "frame": list(range(len(recent))),
+                    "surprise": [float(s) for s in recent],
+                }
+            )
         else:
             # Provide a minimal seed row so LinePlot doesn't crash
             df = pd.DataFrame({"frame": [0], "surprise": [0.0]})
@@ -143,10 +147,11 @@ class COGJEPDashboard:
             return self.ollama.answer_question(question, events)
         # Fallback
         from reasoning.llm_reasoner import LLMReasoner
+
         reasoner = LLMReasoner(use_fallback=True)
         context = "\n".join(
-            f"Frame {e.get('frame_index','?')}: surprise={e.get('surprise_score',0):.3f}, "
-            f"description={e.get('description','N/A')}"
+            f"Frame {e.get('frame_index', '?')}: surprise={e.get('surprise_score', 0):.3f}, "
+            f"description={e.get('description', 'N/A')}"
             for e in events
         )
         return reasoner.query_memory(question, context)
@@ -183,6 +188,7 @@ class COGJEPDashboard:
 
 # ── Image generation helpers ─────────────────────────────────────────────────
 
+
 def _generate_placeholder_image(prompt: str):
     """Generate a simple colored placeholder image with text when API unavailable."""
     from PIL import Image as PILImage, ImageDraw
@@ -201,7 +207,9 @@ def _generate_placeholder_image(prompt: str):
     # Draw text
     draw.rectangle([20, 20, 492, 492], outline=(100, 100, 200), width=2)
     draw.text((256, 80), "🎨 Image Preview", fill=(200, 200, 255), anchor="mm")
-    draw.text((256, 120), "(API temporarily unavailable)", fill=(150, 150, 200), anchor="mm")
+    draw.text(
+        (256, 120), "(API temporarily unavailable)", fill=(150, 150, 200), anchor="mm"
+    )
 
     # Wrap prompt text
     lines = textwrap.wrap(prompt[:200], width=40)
@@ -215,22 +223,28 @@ def _generate_placeholder_image(prompt: str):
 
 # ── Dashboard builder ─────────────────────────────────────────────────────────
 
+
 def create_dashboard() -> gr.Blocks:
     dashboard = COGJEPDashboard()
 
     # Lazy-load image generator — avoids slow diffusers import at startup
     # This runs inside create_dashboard, not at module import time
     import warnings
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        from reasoning.local_image_gen import get_image_generator
+        from reasoning.simple_image_gen import get_image_generator
+
         img_gen = get_image_generator()
 
     # Fetch available Ollama models
     try:
         import requests as _req
+
         resp = _req.get("http://localhost:11434/api/tags", timeout=2)
-        model_choices = [m["name"] for m in resp.json().get("models", [])] if resp.ok else []
+        model_choices = (
+            [m["name"] for m in resp.json().get("models", [])] if resp.ok else []
+        )
     except Exception:
         model_choices = []
     if not model_choices:
@@ -243,9 +257,11 @@ def create_dashboard() -> gr.Blocks:
         .error-box { color: red; }
         .stats-row { gap: 10px; }
         .plot-container { min-height: 260px; }
-        """
+        """,
     ) as demo:
-        gr.Markdown("# 🧠 COG-JEPA  \n*JEPA + Cognee + Ollama-powered video understanding*")
+        gr.Markdown(
+            "# 🧠 COG-JEPA  \n*JEPA + Cognee + Ollama-powered video understanding*"
+        )
 
         # ── Tab 1: Video Analysis ────────────────────────────────────────────
         with gr.Tab("🎬 Video Analysis"):
@@ -269,10 +285,15 @@ def create_dashboard() -> gr.Blocks:
                         file_types=["video"],
                     )
                     with gr.Row():
-                        max_frames = gr.Number(label="Max Frames (0=all)", value=50, precision=0)
+                        max_frames = gr.Number(
+                            label="Max Frames (0=all)", value=50, precision=0
+                        )
                         threshold = gr.Slider(
                             label="Surprise Threshold",
-                            minimum=0.1, maximum=2.0, value=0.3, step=0.05,
+                            minimum=0.1,
+                            maximum=2.0,
+                            value=0.3,
+                            step=0.05,
                         )
                     with gr.Row():
                         start_btn = gr.Button("▶️ Start Analysis", variant="primary")
@@ -293,12 +314,22 @@ def create_dashboard() -> gr.Blocks:
 
                     gr.Markdown("### 📊 Live Statistics")
                     with gr.Row(elem_classes=["stats-row"]):
-                        frames_stat = gr.Number(label="Frames Processed", value=0, interactive=False)
-                        fps_stat = gr.Number(label="Processing Speed (FPS)", value=0.0, interactive=False)
-                        surprise_stat = gr.Number(label="Current Surprise", value=0.0, interactive=False)
+                        frames_stat = gr.Number(
+                            label="Frames Processed", value=0, interactive=False
+                        )
+                        fps_stat = gr.Number(
+                            label="Processing Speed (FPS)", value=0.0, interactive=False
+                        )
+                        surprise_stat = gr.Number(
+                            label="Current Surprise", value=0.0, interactive=False
+                        )
                     with gr.Row(elem_classes=["stats-row"]):
-                        stored_stat = gr.Number(label="Events Stored", value=0, interactive=False)
-                        compression_stat = gr.Number(label="Compression %", value=0.0, interactive=False)
+                        stored_stat = gr.Number(
+                            label="Events Stored", value=0, interactive=False
+                        )
+                        compression_stat = gr.Number(
+                            label="Compression %", value=0.0, interactive=False
+                        )
 
                     refresh_btn = gr.Button("🔄 Refresh Stats")
 
@@ -329,11 +360,15 @@ def create_dashboard() -> gr.Blocks:
             gr.Markdown("### ⚡ Quick Questions")
             with gr.Row():
                 gr.Button("📖 What happened?").click(
-                    fn=lambda: dashboard.query_video("What happened in this video? Tell me the complete story."),
+                    fn=lambda: dashboard.query_video(
+                        "What happened in this video? Tell me the complete story."
+                    ),
                     outputs=query_output,
                 )
                 gr.Button("🎬 Key moments?").click(
-                    fn=lambda: dashboard.query_video("What are the key moments in this video?"),
+                    fn=lambda: dashboard.query_video(
+                        "What are the key moments in this video?"
+                    ),
                     outputs=query_output,
                 )
                 gr.Button("📊 Summary").click(
@@ -352,186 +387,118 @@ def create_dashboard() -> gr.Blocks:
             )
             refresh_events_btn = gr.Button("🔄 Load Events")
 
-        # ── Tab 4: Image Gen (Pollinations.ai) ────────────────────────────────
+        # ── Tab 4: Image Gen ──────────────────────────────────────────────────
         with gr.Tab("🎨 Image Gen"):
             gr.Markdown("### 🎨 AI Image Generation")
             gr.Markdown(
-                "**FREE real image generation** using **Pollinations.ai** (Flux model — no auth required). "
-                "Images are real AI-generated art, not placeholders!"
+                "Type a prompt and click **Generate Image**. Uses local SDXL-Turbo model (no internet required). Generation takes ~30-90 seconds."
             )
 
             with gr.Row():
                 with gr.Column():
                     ig_prompt = gr.Textbox(
                         label="Prompt",
-                        placeholder="A dramatic cinematic scene with golden hour lighting...",
-                        lines=3,
+                        placeholder="A broken car abandoned on a road, cinematic lighting, golden hour, photorealistic...",
+                        lines=4,
                     )
-                    ig_size = gr.Radio(["512x512", "768x512", "1024x1024"], label="Size", value="512x512")
-                    ig_model = gr.Dropdown(
-                        label="AI Model",
-                        choices=["flux", "flux-realism", "flux-anime", "flux-3d", "turbo"],
-                        value="flux",
+                    ig_size = gr.Radio(
+                        ["512x512", "768x512", "1024x1024"],
+                        label="Size",
+                        value="512x512",
                     )
-                    ig_enhance_btn = gr.Button("✨ Enhance Prompt with AI")
+                    ig_enhance_btn = gr.Button("✨ Enhance Prompt with Ollama")
                     ig_gen_btn = gr.Button("🎨 Generate Image", variant="primary")
                 with gr.Column():
-                    ig_output = gr.Image(label="Generated Image", height=450)
-                    ig_status = gr.Textbox(label="Status", interactive=False)
+                    ig_output = gr.Image(label="Generated Image", height=480)
+                    ig_status = gr.Textbox(label="Status", interactive=False, lines=2)
 
             def enhance_prompt(prompt):
                 if not prompt:
                     return prompt, "Enter a prompt first"
                 if dashboard.ollama.connected:
                     enhanced = dashboard.ollama.generate_text(
-                        f"Enhance this image generation prompt to be more detailed and cinematic. "
-                        f"Add lighting, mood, style details. Keep it under 200 chars: {prompt}",
+                        f"Rewrite this image prompt with more cinematic detail, lighting, mood, and style. "
+                        f"Keep it under 180 characters. Prompt: {prompt}",
                         temperature=0.7,
                     )
                     return enhanced, "✅ Prompt enhanced with Ollama"
-                return prompt, "ℹ️ Ollama not connected - prompt unchanged"
+                return prompt, "ℹ️ Ollama not connected — prompt unchanged"
 
-            def do_generate(prompt, size, model):
-                """Always use Pollinations.ai API directly for reliable real image generation."""
+            def do_generate(prompt, size):
+                """Generate image using local SDXL-Turbo with MPS VAE fix."""
                 if not prompt.strip():
-                    return None, "❌ Please enter a prompt"
+                    return None, "❌ Enter a prompt first"
                 try:
-                    import requests as _req
-                    import urllib.parse
-                    import time as _time
-                    from io import BytesIO
-                    from PIL import Image as PILImage
-
-                    # Parse size
-                    parts = size.lower().replace(" ", "").split("x")
-                    w, h = (int(parts[0]), int(parts[1])) if len(parts) == 2 else (512, 512)
-
-                    encoded = urllib.parse.quote(prompt.strip()[:500], safe="")
-                    seed = abs(hash(prompt + str(_time.time()))) % 1000000
-                    url = (
-                        f"https://image.pollinations.ai/prompt/{encoded}"
-                        f"?width={w}&height={h}&model={model}&seed={seed}&nologo=true&enhance=false"
-                    )
-
-                    logger.info(f"🎨 Calling Pollinations.ai ({model}, {w}x{h})...")
-
-                    # Try up to 3 times
-                    for attempt in range(1, 4):
-                        try:
-                            resp = _req.get(url, timeout=120, stream=True,
-                                           headers={"User-Agent": "COG-JEPA/1.0", "Accept": "image/*"})
-
-                            if resp.status_code == 200:
-                                buf = BytesIO()
-                                for chunk in resp.iter_content(8192):
-                                    if chunk:
-                                        buf.write(chunk)
-                                buf_size = buf.tell()
-                                buf.seek(0)
-
-                                if buf_size < 1000:
-                                    logger.warning(f"Response too small ({buf_size}B), retry {attempt}")
-                                    _time.sleep(2)
-                                    continue
-
-                                pil_img = PILImage.open(buf).convert("RGB")
-                                iw, ih = pil_img.size
-
-                                # Reject tiny images (error responses)
-                                if iw < 64 or ih < 64:
-                                    logger.warning(f"Image too small ({iw}x{ih}), retry {attempt}")
-                                    _time.sleep(2)
-                                    continue
-
-                                # Check not all-black (pixel sum > 0)
-                                import numpy as _np
-                                arr = _np.array(pil_img)
-                                if arr.mean() < 1.0:
-                                    logger.warning(f"Image appears black (mean={arr.mean():.2f}), retry {attempt}")
-                                    seed = (seed + 1) % 1000000
-                                    url = (
-                                        f"https://image.pollinations.ai/prompt/{encoded}"
-                                        f"?width={w}&height={h}&model={model}&seed={seed}&nologo=true&enhance=false"
-                                    )
-                                    _time.sleep(2)
-                                    continue
-
-                                os.makedirs("data", exist_ok=True)
-                                save_path = f"data/generated_{abs(hash(prompt)) % 100000}.png"
-                                pil_img.save(save_path)
-                                logger.info(f"✅ Image generated {iw}x{ih} ({buf_size} bytes)")
-                                return pil_img, f"✅ Generated via Pollinations.ai | {iw}x{ih}px | model={model}"
-
-                            elif resp.status_code == 429:
-                                logger.warning("Rate limited, waiting 5s...")
-                                _time.sleep(5)
-                            else:
-                                logger.error(f"API error {resp.status_code}, retry {attempt}")
-                                _time.sleep(2)
-
-                        except Exception as req_err:
-                            logger.error(f"Request attempt {attempt} failed: {req_err}")
-                            _time.sleep(2)
-
-                    return _generate_placeholder_image(prompt), "❌ Pollinations.ai unavailable after 3 attempts"
-
+                    logger.info(f"Generating: {prompt[:60]}")
+                    ig_gen_btn.interactive = False  # noqa
+                    result = img_gen.generate_image(prompt.strip(), size)
+                    if result is not None:
+                        w, h = result.size
+                        return result, f"✅ Generated {w}x{h} | Saved to data/"
+                    return None, "❌ Generation failed — check logs"
                 except Exception as e:
-                    logger.error(f"Generation error: {e}")
-                    return _generate_placeholder_image(prompt), f"❌ Error: {e}"
+                    logger.error(f"do_generate error: {e}")
+                    return None, f"❌ Error: {e}"
 
-            ig_enhance_btn.click(enhance_prompt, inputs=[ig_prompt], outputs=[ig_prompt, ig_status])
-            ig_gen_btn.click(do_generate, inputs=[ig_prompt, ig_size, ig_model], outputs=[ig_output, ig_status])
+            ig_enhance_btn.click(
+                enhance_prompt, inputs=[ig_prompt], outputs=[ig_prompt, ig_status]
+            )
+            ig_gen_btn.click(
+                do_generate, inputs=[ig_prompt, ig_size], outputs=[ig_output, ig_status]
+            )
 
         # ── Tab 5: Generate Image from Video ────────────────────────────────
         with gr.Tab("🎬 Generate Image"):
             gr.Markdown("### 🎬 Generate Image from Video Moments")
-            gr.Markdown("Automatically creates an image prompt from the most dramatic video moment.")
+            gr.Markdown(
+                "Picks the most surprising frame from your analyzed video and generates an image from it."
+            )
 
             with gr.Row():
                 with gr.Column():
                     gv_prompt_display = gr.Textbox(
                         label="Auto-generated Prompt (editable)",
                         lines=3,
-                        placeholder="Process a video first, then click 'Extract from Video'",
+                        placeholder="Process a video first, then click Extract from Video",
                     )
-                    gv_size = gr.Radio(["512x512", "768x512", "1024x1024"], label="Size", value="512x512")
-                    gv_model = gr.Dropdown(
-                        label="AI Model",
-                        choices=["flux", "flux-realism", "flux-anime", "turbo"],
-                        value="flux-realism",
+                    gv_size = gr.Radio(
+                        ["512x512", "768x512", "1024x1024"],
+                        label="Size",
+                        value="512x512",
                     )
                     with gr.Row():
                         gv_extract_btn = gr.Button("🎯 Extract from Video")
                         gv_gen_btn = gr.Button("🎨 Generate", variant="primary")
                 with gr.Column():
-                    gv_output = gr.Image(label="Generated Image", height=450)
-                    gv_status = gr.Textbox(label="Status", interactive=False)
+                    gv_output = gr.Image(label="Generated Image", height=480)
+                    gv_status = gr.Textbox(label="Status", interactive=False, lines=2)
 
             def extract_video_prompt():
                 dashboard.memory_store._load_from_log()
                 events = dashboard.memory_store.get_recent_events_sync(n=20)
                 if not events:
-                    return "", "❌ No video analyzed yet. Process a video first!"
-                # Pick most dramatic event
-                top_event = max(events, key=lambda e: e.get("surprise_score", 0))
-                desc = top_event.get("description", "dramatic scene")
-                score = top_event.get("surprise_score", 0)
-                frame = top_event.get("frame_index", 0)
+                    return "", "❌ No video analyzed yet — process one first"
+                top = max(events, key=lambda e: e.get("surprise_score", 0))
+                desc = top.get("description", "dramatic scene")
+                score = top.get("surprise_score", 0)
+                frame = top.get("frame_index", 0)
                 prompt = (
                     f"Cinematic movie still: {desc}, "
-                    "dramatic lighting, professional cinematography, 4k, photorealistic, film grain"
+                    "dramatic lighting, professional cinematography, 4k, photorealistic"
                 )
                 return prompt, f"✅ Extracted from frame {frame} (surprise={score:.4f})"
 
-            def generate_from_video(prompt, size, model):
+            def generate_from_video(prompt, size):
                 if not prompt.strip():
                     return None, "❌ Extract a prompt from video first"
-                return do_generate(prompt, size, model)
+                return do_generate(prompt, size)
 
-            gv_extract_btn.click(extract_video_prompt, outputs=[gv_prompt_display, gv_status])
+            gv_extract_btn.click(
+                extract_video_prompt, outputs=[gv_prompt_display, gv_status]
+            )
             gv_gen_btn.click(
                 generate_from_video,
-                inputs=[gv_prompt_display, gv_size, gv_model],
+                inputs=[gv_prompt_display, gv_size],
                 outputs=[gv_output, gv_status],
             )
 
@@ -539,7 +506,9 @@ def create_dashboard() -> gr.Blocks:
 
         def run_analysis(mode, file_obj, n_frames, thresh):
             try:
-                msg = dashboard.start_pipeline(mode, file_obj, int(n_frames), float(thresh))
+                msg = dashboard.start_pipeline(
+                    mode, file_obj, int(n_frames), float(thresh)
+                )
                 time.sleep(0.5)  # Brief wait for pipeline to init
                 frames, fps, surprise, stored, comp, df = dashboard.get_stats_tuple()
                 return msg, frames, fps, surprise, stored, comp, df
@@ -551,7 +520,15 @@ def create_dashboard() -> gr.Blocks:
         start_btn.click(
             run_analysis,
             inputs=[mode_select, file_input, max_frames, threshold],
-            outputs=[status, frames_stat, fps_stat, surprise_stat, stored_stat, compression_stat, plot],
+            outputs=[
+                status,
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
         )
         stop_btn.click(dashboard.stop_pipeline, outputs=status)
 
@@ -566,17 +543,35 @@ def create_dashboard() -> gr.Blocks:
 
         refresh_btn.click(
             refresh_stats,
-            outputs=[frames_stat, fps_stat, surprise_stat, stored_stat, compression_stat, plot],
+            outputs=[
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
         )
 
-        model_change_btn.click(dashboard.set_model, inputs=[model_select], outputs=status)
-        query_btn.click(dashboard.query_video, inputs=[query_input], outputs=query_output)
+        model_change_btn.click(
+            dashboard.set_model, inputs=[model_select], outputs=status
+        )
+        query_btn.click(
+            dashboard.query_video, inputs=[query_input], outputs=query_output
+        )
         refresh_events_btn.click(dashboard.get_events_table, outputs=events_data)
 
         # Load initial state on page open — safe version
         demo.load(
             refresh_stats,
-            outputs=[frames_stat, fps_stat, surprise_stat, stored_stat, compression_stat, plot],
+            outputs=[
+                frames_stat,
+                fps_stat,
+                surprise_stat,
+                stored_stat,
+                compression_stat,
+                plot,
+            ],
         )
 
         # Auto-refresh every 3 seconds when running
@@ -584,7 +579,14 @@ def create_dashboard() -> gr.Blocks:
             timer = gr.Timer(value=3, active=False)
             timer.tick(
                 fn=refresh_stats,
-                outputs=[frames_stat, fps_stat, surprise_stat, stored_stat, compression_stat, plot],
+                outputs=[
+                    frames_stat,
+                    fps_stat,
+                    surprise_stat,
+                    stored_stat,
+                    compression_stat,
+                    plot,
+                ],
             )
             # Activate timer when pipeline starts
             start_btn.click(lambda: gr.Timer(active=True), outputs=[timer])
