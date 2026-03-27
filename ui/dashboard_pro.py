@@ -399,25 +399,22 @@ def create_dashboard() -> gr.Blocks:
                 outputs=[gen_output, gen_prompt],
             )
 
-        # Event handlers
-        def start_pipeline(mode, file_obj, frames, thresh):
-            # Handle different Gradio 6.0 file object formats
-            try:
-                if file_obj is None:
-                    file_path = None
-                elif hasattr(file_obj, "name"):
-                    file_path = str(file_obj.name)
-                elif isinstance(file_obj, str):
-                    file_path = file_obj
-                elif isinstance(file_obj, dict) and "name" in file_obj:
-                    file_path = str(file_obj["name"])
+        # Event handlers - simplified for Gradio 6.0 compatibility
+        def start_pipeline_fn(mode, file_obj, frames, thresh):
+            # Handle file object or path
+            actual_path = ""
+            if file_obj:
+                if isinstance(file_obj, str):
+                    actual_path = file_obj
                 else:
-                    file_path = str(file_obj) if str(file_obj) != "None" else None
-            except:
-                file_path = None
+                    try:
+                        actual_path = str(file_obj)
+                    except:
+                        actual_path = ""
 
+            # Call dashboard method
             result = dashboard.start_pipeline(
-                mode, file_path, int(frames), float(thresh)
+                mode, actual_path, int(frames), float(thresh)
             )
             # Trigger initial stats update
             state = dashboard.get_state()
@@ -434,7 +431,7 @@ def create_dashboard() -> gr.Blocks:
             )
 
         start_btn.click(
-            start_pipeline,
+            start_pipeline_fn,
             inputs=[mode_select, file_input, max_frames, threshold],
             outputs=[
                 status,
