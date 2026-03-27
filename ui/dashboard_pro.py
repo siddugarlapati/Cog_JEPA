@@ -401,7 +401,21 @@ def create_dashboard() -> gr.Blocks:
 
         # Event handlers
         def start_pipeline(mode, file_obj, frames, thresh):
-            file_path = str(file_obj.name) if file_obj else None
+            # Handle different Gradio 6.0 file object formats
+            try:
+                if file_obj is None:
+                    file_path = None
+                elif hasattr(file_obj, "name"):
+                    file_path = str(file_obj.name)
+                elif isinstance(file_obj, str):
+                    file_path = file_obj
+                elif isinstance(file_obj, dict) and "name" in file_obj:
+                    file_path = str(file_obj["name"])
+                else:
+                    file_path = str(file_obj) if str(file_obj) != "None" else None
+            except:
+                file_path = None
+
             result = dashboard.start_pipeline(
                 mode, file_path, int(frames), float(thresh)
             )
